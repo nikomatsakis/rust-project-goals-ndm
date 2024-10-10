@@ -7,23 +7,22 @@ document.addEventListener("DOMContentLoaded", function () {
 // The `id` is expected to have the format `2024h2:rust-lang:rust-project-goals:123`
 async function updateProgressBars() {
     let issueData = new IssueData();
-    for (let progressBar of document.body.getElementsByTagName("progress")) {
-        const id = progressBar.id;
+    document.querySelectorAll('div.tracking-issue-progress').forEach(async progressDiv => {
+        const id = progressDiv.id;
         if (!id) {
             console.error("progress element is missing an id");
-            continue;
+            return;
         }
 
         try {
             const issue = await issueData.loadData(id);
             if (issue) {
-                progressBar.value = issue.completedItems();
-                progressBar.max = issue.totalItems();
+                progressDiv.innerHTML = issue.progressHtml();
             }
         } catch (error) {
             console.error(`Error loading data for ${id}:`, error.message);
         }
-    }
+    });
 }
 
 class IssueData {
@@ -87,11 +86,48 @@ class Issue {
         this.#json = json;
     }
 
-    completedItems() {
-        return this.#json.checked_checkboxes;
-    }
+    progressHtml() {
+        let state = this.#json.state;
 
-    totalItems() {
-        return this.#json.total_checkboxes;
+        function progressElement(completed, total) {
+            // If the issue is closed, then either the work is COMPLETE
+            // or will never complete.
+            if (state === "CLOSED") {
+                if (completed === total) {
+                    return `<center><img src="https://img.shields.io/badge/Completed!%20%3A%29-green" alt="Completed"/></center>`;
+                } else {
+                    return `<center><img src="https://img.shields.io/badge/Incomplete%20%3A%28-yellow" alt="Incomplete"/></center>`;
+                }
+            } else {
+                return `<progress value="${completed}" max="${total}" ></progress>`;
+            }
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        let o = this.#json.progress.Tracked;
+        if (o) {
+            return progressElement(o.completed, o.total);
+        }
+
+        o = this.#json.progress.Binary;
+        if (o) {
+            if (state === "OPEN") {
+                return progressElement(0, 1);
+            } else {
+                return progressElement(1, 1);
+            }
+        }
+
+        o = this.#json.progress.Error;
+        let message = escapeHtml(o?.message || "Error loading status");
+        return `<span title="${message}" >⚠️</span>`;
     }
 }
