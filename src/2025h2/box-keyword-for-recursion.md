@@ -69,40 +69,19 @@ fn fibonacci(input: u32) -> impl Future<Output = u32> {
 
 ### The next 6 months
 
-The plan is to author an RFC 
+The plan is to explore the use of annotations that permit heap allocation, for example:
+
+* on data structures (struct, enum), indicating that the structure should be heap-allocated;
+* on enum variants, indicating that the data for that variant should be heap allocated;
+* on async functions, indicating that the closure should be heap-allocated.
+
+The plan is to begin with exploration of Rust code in crates.io and in other sources to try and identify common patterns where heap allocation could be useful.
+
+We will try to identify an initial set of functionality that could be useful. One likely candidate is the `box` keyword, as described in the [Box, Box, Box](https://smallcultfollowing.com/babysteps/blog/2025/03/24/box-box-box/) blog post. Box has the advantage of being a good "default choice" for resolving these kinds of cycles. Unlike other smart pointer types, box conveys ownership, and we already have built-in language rules that support it. The goal would be that data structures declared as `box` transparently use heap-allocation.
 
 ### The "shiny future" we are working towards
 
-
-### Box keyword syntax makes recursive types as natural as regular types
-
-We will design and prototype `box` keyword syntax that puts allocation decisions at the declaration site:
-
-- `box struct` for recursive structs like linked lists
-- `box enum` for recursive enums like ASTs  
-- `box` enum variants for handling size-imbalanced variants
-- Transparent usage where construction and pattern matching work naturally
-
-The deliverable will be a lang-team experiment with a working prototype implementation and an authored RFC submitted for review.
-
-### The "shiny future" we are working towards
-
-Recursive data structures in Rust should be as ergonomic as non-recursive ones. Developers should be able to write:
-
-```rust
-box struct List {
-    value: u32,
-    next: Option<List>,
-}
-
-// Construction works naturally
-let list = List { value: 1, next: Some(List { value: 2, next: None }) };
-
-// Pattern matching works naturally  
-let List { value, next } = list;
-```
-
-Wouldn't it be nice if the compiler could suggest adding a `box` keyword when you declare the struct and have `List { value: 22, next: None }` automatically allocate the box for you? The ideal is that the presence of a box is completely transparent, so I can pattern match and construct values fully transparently.
+Convenient annotations that enable users to conveniently build and work with recursive types. The ability to control the form of indirection introduced, e.g., `Box` vs `Rc` vs `Arc` vs something else.
 
 ## Design axioms
 
