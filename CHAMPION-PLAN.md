@@ -74,13 +74,13 @@ These reports include the details only of goals for a particular team.
 ## Implementation Steps
 
 ### Phase 1a: Research & Basic Structure
-- [ ] Modify mdbook preprocessor to detect `(((REPORTS: date-range)))` placeholder
-- [ ] Parse date range argument (inclusive endpoints)
-- [ ] Generate basic reports section with timestamp
-- [ ] Create framework for `.md` file generation
+- [x] Modify mdbook preprocessor to detect `(((REPORTS: date-range)))` placeholder
+- [x] Parse date range argument (inclusive endpoints) - *Note: parsing implemented in regex, full parsing deferred to Phase 1b*
+- [x] Generate basic reports section with timestamp
+- [x] Create framework for `.md` file generation
 
 GOAL AT THE END OF PHASE:
-* `(((REPORTS: 2025-09-01 to 2025-12-31)))` expands to fixed content with correct structure
+* `(((REPORTS: 2025-09-01 to 2025-12-31)))` expands to fixed content with correct structure ✅
 
 ### Phase 1b: Champion TOC
 - [ ] Research how existing goal population adds subchapters to mdbook

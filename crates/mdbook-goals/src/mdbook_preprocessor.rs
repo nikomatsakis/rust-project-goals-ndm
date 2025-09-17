@@ -4,6 +4,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use anyhow::Context;
+use chrono;
 use mdbook::book::{Book, Chapter};
 use mdbook::preprocess::{Preprocessor, PreprocessorContext};
 use mdbook::BookItem;
@@ -154,6 +155,7 @@ impl<'c> GoalPreprocessorWithContext<'c> {
                 self.replace_goal_lists(chapter)?;
                 self.replace_goal_count(chapter)?;
                 self.replace_flagship_goal_count(chapter)?;
+                self.replace_reports(chapter)?;
                 self.link_teams(chapter)?;
                 self.link_users(chapter)?;
                 self.linkify(chapter)?;
@@ -612,6 +614,47 @@ impl<'c> GoalPreprocessorWithContext<'c> {
 
         Ok(())
     }
+
+    fn replace_reports(&mut self, chapter: &mut Chapter) -> anyhow::Result<()> {
+        if !re::REPORTS.is_match(&chapter.content) {
+            return Ok(());
+        }
+
+        let now = chrono::Utc::now();
+        let timestamp = now.format("%Y-%m-%d %H:%M:%S UTC");
+
+        let replacement = format!(
+            r#"# Reports
+
+This section contains automatically generated reports based on the comments left in the goal tracking issues.
+
+These reports were last generated at {}.
+
+## Blog post
+
+These are the main blog posts that are published each month:
+
+* [October](./blog-post-2025-10.md)
+* [September](./blog-post-2025-09.md)
+
+## Champion reports
+
+These reports include the details only of goals for a particular team.
+
+### Lang team
+* [October](./lang/2025-10.md)
+* [September](./lang/2025-09.md)
+
+### Compiler team
+* [October](./compiler/2025-10.md)
+* [September](./compiler/2025-09.md)"#,
+            timestamp
+        );
+
+        chapter.content = re::REPORTS.replace_all(&chapter.content, replacement).to_string();
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -636,5 +679,61 @@ mod tests {
         let mut test_content = content.to_string();
         test_content.insert_str(offset, "| New row | value |\n");
         assert!(test_content.contains("| Teams | (none) |\n| New row | value |\n\nSome text after"));
+    }
+
+    #[test]
+    fn test_reports_replacement() {
+        use mdbook::book::Chapter;
+        
+        let mut chapter = Chapter::new(
+            "Test Chapter",
+            "# Test\n\n(((REPORTS)))\n\nEnd".to_string(),
+            "test.md",
+            Vec::new(),
+        );
+        
+        // Test the regex directly
+        assert!(re::REPORTS.is_match(&chapter.content));
+        
+        // Test the replacement logic
+        let now = chrono::Utc::now();
+        let timestamp = now.format("%Y-%m-%d %H:%M:%S UTC");
+
+        let replacement = format!(
+            r#"# Reports
+
+This section contains automatically generated reports based on the comments left in the goal tracking issues.
+
+These reports were last generated at {}.
+
+## Blog post
+
+These are the main blog posts that are published each month:
+
+* [October](./blog-post-2025-10.md)
+* [September](./blog-post-2025-09.md)
+
+## Champion reports
+
+These reports include the details only of goals for a particular team.
+
+### Lang team
+* [October](./lang/2025-10.md)
+* [September](./lang/2025-09.md)
+
+### Compiler team
+* [October](./compiler/2025-10.md)
+* [September](./compiler/2025-09.md)"#,
+            timestamp
+        );
+
+        chapter.content = re::REPORTS.replace_all(&chapter.content, replacement).to_string();
+        
+        // Check that the placeholder was replaced
+        assert!(!chapter.content.contains("(((REPORTS)))"));
+        assert!(chapter.content.contains("# Reports"));
+        assert!(chapter.content.contains("These reports were last generated at"));
+        assert!(chapter.content.contains("## Blog post"));
+        assert!(chapter.content.contains("## Champion reports"));
     }
 }

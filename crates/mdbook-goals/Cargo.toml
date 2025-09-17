@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.94"
+chrono = "0.4"
 clap = { version = "4.5.23", features = ["derive"] }
 mdbook = "0.4.52"
 regex = "1.11.1"
