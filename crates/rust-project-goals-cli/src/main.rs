@@ -109,6 +109,10 @@ enum Command {
         /// End date for comments.
         /// If not given, no end date.
         end_date: Option<chrono::NaiveDate>,
+
+        /// Filter to only include goals that have a champion from the specified team.
+        #[arg(long)]
+        with_champion_from: Option<String>,
     },
 
     /// Generate various CSV reports
@@ -183,6 +187,7 @@ fn main() -> Result<()> {
             output_file,
             start_date,
             end_date,
+            with_champion_from,
         } => updates::generate_updates(
             &opt.repository,
             milestone,
@@ -190,6 +195,7 @@ fn main() -> Result<()> {
             start_date,
             end_date,
             *vscode,
+            with_champion_from.as_deref(),
         )?,
 
         Command::CSV { cmd } => csv_reports::csv(&opt.repository, cmd)?,

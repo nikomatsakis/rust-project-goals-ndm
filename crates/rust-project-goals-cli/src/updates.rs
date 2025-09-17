@@ -3,10 +3,10 @@ use regex::Regex;
 use rust_project_goals::re::{HELP_WANTED, TLDR};
 use rust_project_goals::spanned::{Context as _, Result, Span, Spanned};
 use rust_project_goals::util::comma;
-use rust_project_goals::{markwaydown, spanned};
+use rust_project_goals::{markwaydown, spanned, goal, team};
 use rust_project_goals_json::GithubIssueState;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 mod templates;
@@ -24,6 +24,7 @@ pub(crate) fn generate_updates(
     start_date: &Option<NaiveDate>,
     end_date: &Option<NaiveDate>,
     vscode: bool,
+    with_champion_from: Option<&str>,
 ) -> Result<()> {
     if output_file.is_none() && !vscode {
         spanned::bail_here!("either `--output-file` or `--vscode` must be specified");
@@ -39,6 +40,30 @@ pub(crate) fn generate_updates(
 
     let issues = list_issues_in_milestone(repository, milestone)?;
 
+    // Filter issues by champion team if specified
+    let filtered_issues = if let Some(team_name) = with_champion_from {
+        let team_name = team::get_team_name(team_name)?
+            .ok_or_else(|| spanned::Error::str(format!("unknown team: {}", team_name)))?;
+        
+        // Load goal documents to check champions
+        let mut milestone_path = PathBuf::from("src");
+        milestone_path.push(milestone);
+        let goal_documents = goal::goals_in_dir(&milestone_path)?;
+        
+        // Create a set of issue numbers for goals that have a champion from the specified team
+        let champion_issue_numbers: std::collections::HashSet<u64> = goal_documents
+            .iter()
+            .filter(|doc| doc.metadata.champions.contains_key(team_name))
+            .filter_map(|doc| doc.metadata.tracking_issue.as_ref().map(|issue| issue.number))
+            .collect();
+        
+        issues.into_iter()
+            .filter(|issue| champion_issue_numbers.contains(&issue.number))
+            .collect()
+    } else {
+        issues
+    };
+
     let filter = Filter {
         start_date: match start_date {
             Some(date) => date.clone(),
@@ -47,15 +72,15 @@ pub(crate) fn generate_updates(
         end_date,
     };
 
-    progress_bar::init_progress_bar(issues.len());
+    progress_bar::init_progress_bar(filtered_issues.len());
     progress_bar::set_progress_bar_action(
         "Executing",
         progress_bar::Color::Blue,
         progress_bar::Style::Bold,
     );
 
-    let flagship_goals = prepare_goals(repository, &issues, &filter, true)?;
-    let other_goals = prepare_goals(repository, &issues, &filter, false)?;
+    let flagship_goals = prepare_goals(repository, &filtered_issues, &filter, true)?;
+    let other_goals = prepare_goals(repository, &filtered_issues, &filter, false)?;
     let updates = templates::Updates::new(milestone.to_string(), flagship_goals, other_goals);
 
     progress_bar::finalize_progress_bar();
