@@ -620,8 +620,34 @@ impl<'c> GoalPreprocessorWithContext<'c> {
             return Ok(());
         }
 
+        let Some(chapter_path) = &chapter.path else {
+            anyhow::bail!("found REPORTS placeholder but chapter has no path")
+        };
+
+        // Discover teams with champions
+        let goals = self.goal_documents(chapter_path)?;
+        let mut teams_with_champions: BTreeSet<String> = BTreeSet::new();
+        
+        for goal in goals.iter() {
+            for team_name in goal.metadata.champions.keys() {
+                // Extract team name from gh_label format (T-teamname -> teamname)
+                let gh_label = team_name.gh_label();
+                let team_str = gh_label.strip_prefix("T-").unwrap_or(&gh_label);
+                teams_with_champions.insert(team_str.to_string());
+            }
+        }
+
         let now = chrono::Utc::now();
         let timestamp = now.format("%Y-%m-%d %H:%M:%S UTC");
+
+        // Generate champion reports section
+        let mut champion_reports_section = String::from("## Champion reports\n\nThese reports include the details only of goals for a particular team.\n\n");
+        
+        for team_name in &teams_with_champions {
+            champion_reports_section.push_str(&format!("### {} team\n", team_name));
+            champion_reports_section.push_str(&format!("* [October](./{}/2025-10.md)\n", team_name));
+            champion_reports_section.push_str(&format!("* [September](./{}/2025-09.md)\n\n", team_name));
+        }
 
         let replacement = format!(
             r#"# Reports
@@ -637,18 +663,9 @@ These are the main blog posts that are published each month:
 * [October](./blog-post-2025-10.md)
 * [September](./blog-post-2025-09.md)
 
-## Champion reports
-
-These reports include the details only of goals for a particular team.
-
-### Lang team
-* [October](./lang/2025-10.md)
-* [September](./lang/2025-09.md)
-
-### Compiler team
-* [October](./compiler/2025-10.md)
-* [September](./compiler/2025-09.md)"#,
-            timestamp
+{}"#,
+            timestamp,
+            champion_reports_section
         );
 
         chapter.content = re::REPORTS.replace_all(&chapter.content, replacement).to_string();
@@ -695,7 +712,8 @@ mod tests {
         // Test the regex directly
         assert!(re::REPORTS.is_match(&chapter.content));
         
-        // Test the replacement logic
+        // Test the replacement logic with a simple fixed replacement
+        // (since we can't easily mock the goal documents in a unit test)
         let now = chrono::Utc::now();
         let timestamp = now.format("%Y-%m-%d %H:%M:%S UTC");
 
@@ -717,13 +735,7 @@ These are the main blog posts that are published each month:
 
 These reports include the details only of goals for a particular team.
 
-### Lang team
-* [October](./lang/2025-10.md)
-* [September](./lang/2025-09.md)
-
-### Compiler team
-* [October](./compiler/2025-10.md)
-* [September](./compiler/2025-09.md)"#,
+"#,
             timestamp
         );
 

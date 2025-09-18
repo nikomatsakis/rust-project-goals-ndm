@@ -83,13 +83,13 @@ GOAL AT THE END OF PHASE:
 * `(((REPORTS: 2025-09-01 to 2025-12-31)))` expands to fixed content with correct structure ✅
 
 ### Phase 1b: Champion TOC
-- [ ] Research how existing goal population adds subchapters to mdbook
-- [ ] Scan goals to discover teams with champions
-- [ ] Generate champion-specific folder structure (`{team-name}/YYYY-MM.md`) with placeholder content "TBD"
-- [ ] Generate champion team sections in reports with monthly links
+- [x] Research how existing goal population adds subchapters to mdbook - *Studied replace_goal_lists_helper pattern*
+- [x] Scan goals to discover teams with champions
+- [x] Generate champion-specific folder structure (`{team-name}/YYYY-MM.md`) with placeholder content "TBD" - *Links generated, actual files deferred to Phase 4*
+- [x] Generate champion team sections in reports with monthly links
 
 GOAL AT THE END OF PHASE:
-* `(((REPORTS)))` has correct list of champion files organized by team, but content is placeholder
+* `(((REPORTS)))` has correct list of champion files organized by team, but content is placeholder ✅
 
 ### Phase 1c: Blog post TOC
 - [ ] Determine months to generate based on date range argument
