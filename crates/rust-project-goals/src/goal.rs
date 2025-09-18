@@ -399,7 +399,7 @@ pub enum AcceptanceStatus {
 
 fn extract_metadata(sections: &[Section]) -> Result<Option<Metadata>> {
     let Some(first_section) = sections.first() else {
-        spanned::bail_here!("no markdown sections found in input")
+        return Ok(None);
     };
 
     if first_section.title.is_empty() {
